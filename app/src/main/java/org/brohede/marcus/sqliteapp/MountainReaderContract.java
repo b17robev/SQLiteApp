@@ -26,7 +26,6 @@ public class MountainReaderContract {
     }
 
     public static final String SQL_CREATE  =
-
         "CREATE TABLE " + MountainEntry.TABLE_NAME + " (" +
             MountainEntry.COLUMN_NAME_NAME + " TEXT, " +
             MountainEntry.COLUMN_NAME_LOCATION + " TEXT, " +
