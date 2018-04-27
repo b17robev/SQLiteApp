@@ -2,14 +2,19 @@ package org.brohede.marcus.sqliteapp;
 
 import android.content.ContentValues;
 import android.content.Intent;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
+import android.provider.BaseColumns;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -31,17 +36,38 @@ public class MainActivity extends AppCompatActivity {
 
     MountainReaderDbHelper dbHelper;
 
+    String[] projection = {
+            BaseColumns._ID,
+            MountainReaderContract.MountainEntry.COLUMN_NAME_NAME,
+            MountainReaderContract.MountainEntry.COLUMN_NAME_HEIGHT,
+            MountainReaderContract.MountainEntry.COLUMN_NAME_LOCATION,
+            MountainReaderContract.MountainEntry.COLUMN_NAME_IMG_URL,
+            MountainReaderContract.MountainEntry.COLUMN_NAME_INFO_URL,
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        dbHelper = new MountainReaderDbHelper(this);
 
+        dbHelper = new MountainReaderDbHelper(this);
+        adapter = new MountainAdapter(getApplicationContext(), mountainList);
         myListView = (ListView)findViewById(R.id.myList);
 
         FetchData fetchData = new FetchData();
         fetchData.execute();
+
+        myListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                /*No need to open new readable database since mountainList contains the data fetched from the database*/
+
+                String toastText = mountainList.get(i).infoText();
+                Toast.makeText(getApplicationContext(), toastText, Toast.LENGTH_SHORT).show();
+
+            }
+        });
 
 
     }
@@ -76,6 +102,38 @@ public class MainActivity extends AppCompatActivity {
         TODO: The SQLite database must not contain any duplicate mountain names
 
      */
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu){
+        getMenuInflater().inflate(R.menu.menu, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item){
+        int id = item.getItemId();
+
+        if(id == R.id.action_refresh)
+        {
+            mountainList.clear();
+            new FetchData().execute();
+            Toast refreshed = Toast.makeText(this, "List have been refreshed", Toast.LENGTH_SHORT);
+            refreshed.show();
+
+            return true;
+        }
+
+        if(id == R.id.action_sortHeight)
+        {
+            mountainList.clear();
+
+            Cursor c = sortByColumn(projection, "height", "DESC" );
+            updateList(c);
+            Toast.makeText(this, "Sorted by height", Toast.LENGTH_SHORT).show();
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
 
     private class FetchData extends AsyncTask<Void,Void,String> {
         @Override
@@ -154,12 +212,11 @@ public class MainActivity extends AppCompatActivity {
             try
             {
                 JSONArray mountains = new JSONArray(o);
-                MountainReaderDbHelper dbHelper = new MountainReaderDbHelper(getApplicationContext());
-                SQLiteDatabase db = dbHelper.getWritableDatabase();
 
                 for(int i = 0; i < mountains.length(); i++){
                     JSONObject mountain = mountains.getJSONObject(i);
                     ContentValues values = new ContentValues();
+                    SQLiteDatabase db = dbHelper.getWritableDatabase();
 
                     int id = mountain.getInt("ID");
                     String name = mountain.getString("name");
@@ -180,23 +237,46 @@ public class MainActivity extends AppCompatActivity {
 
 
                     db.insert(MountainReaderContract.MountainEntry.TABLE_NAME, null, values);
-                    Log.d("hiho", "Database inserted");
-
-
-                    Mountain m = new Mountain(name, height, location, imageUrl, wikipediaUrl, id);
-                    mountainList.add(m);
-
                 }
+                Cursor c = sortByColumn(projection, "name", "DESC" );
+                updateList(c);
             }
             catch( JSONException e) {
                 e.printStackTrace();
             }
-
-            adapter = new MountainAdapter(getApplicationContext(), mountainList);
-            Log.d("hiho", mountainList.toString());
-            myListView = (ListView)findViewById(R.id.myList);
-            myListView.setAdapter(adapter);
-
         }
     }
+
+    public void updateList(Cursor cursor)
+    {
+        adapter.clear();
+
+        while(cursor.moveToNext()){
+            int id = cursor.getInt(cursor.getColumnIndex(BaseColumns._ID));
+            String name = cursor.getString(cursor.getColumnIndex(MountainReaderContract.MountainEntry.COLUMN_NAME_NAME));
+            int height = cursor.getInt(cursor.getColumnIndex(MountainReaderContract.MountainEntry.COLUMN_NAME_HEIGHT));
+            String location = cursor.getString(cursor.getColumnIndex(MountainReaderContract.MountainEntry.COLUMN_NAME_LOCATION));
+            String imageUrl = cursor.getString(cursor.getColumnIndex(MountainReaderContract.MountainEntry.COLUMN_NAME_IMG_URL));
+            String infoUrl = cursor.getString(cursor.getColumnIndex(MountainReaderContract.MountainEntry.COLUMN_NAME_INFO_URL));
+
+
+            Mountain mountain = new Mountain(name, height, location, imageUrl, infoUrl, id);
+            mountainList.add(mountain);
+        }
+        Log.d("hiho", "Mountains added");
+        cursor.close();
+
+        myListView = (ListView)findViewById(R.id.myList);
+        myListView.setAdapter(adapter);
+
+    }
+
+    public Cursor sortByColumn(String[] projections, String column, String sortBy){
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+
+        String order = column + " " + sortBy;
+        Cursor cursor = db.query(MountainReaderContract.MountainEntry.TABLE_NAME, projections ,null, null, null, null, order);
+
+        return cursor;
+    };
 }

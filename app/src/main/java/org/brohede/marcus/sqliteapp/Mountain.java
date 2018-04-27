@@ -47,6 +47,6 @@ public class Mountain {
     }
 
     public String infoText(){
-        return name + "is a part of the" + location + " mountain range and is " + height + "m high.";
+        return name + " is a part of the " + location + " mountain range and is " + height + "m high.";
     }
 }
