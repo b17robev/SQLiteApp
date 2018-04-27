@@ -10,12 +10,15 @@ import android.util.Log;
  */
 
 public class MountainReaderDbHelper extends SQLiteOpenHelper {
+
     // TODO: You need to add member variables and methods to this helper class
     // See: https://developer.android.com/training/data-storage/sqlite.html#DbHelper
+    public static final int DATABASE_VERSION = 1;
+    public static final String DATABASE_NAME = "mountains.db";
+
     MountainReaderDbHelper(Context c){
         //Constructor is run
-        super (c,"Mountains.db", null, 1);
-        Log.d("hihoo", "asdasdadsadsads");
+        super (c,DATABASE_NAME, null, DATABASE_VERSION);
     }
 
     //Not run for some reason
@@ -27,7 +30,8 @@ public class MountainReaderDbHelper extends SQLiteOpenHelper {
     }
 
     @Override
-    public void onUpgrade(SQLiteDatabase sqLiteDatabase, int oldVersion, int newVersion) {
-
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        db.execSQL(MountainReaderContract.SQL_DELETE_TABLE);
+        onCreate(db);
     }
 }

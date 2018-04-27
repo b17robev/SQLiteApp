@@ -29,10 +29,14 @@ public class MainActivity extends AppCompatActivity {
     MountainAdapter adapter;
     ListView myListView;
 
+    MountainReaderDbHelper dbHelper;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        dbHelper = new MountainReaderDbHelper(this);
 
         myListView = (ListView)findViewById(R.id.myList);
 
@@ -143,6 +147,10 @@ public class MainActivity extends AppCompatActivity {
 
             // Implement a parsing code that loops through the entire JSON and creates objects
             // of our newly created Mountain class
+
+            deleteDatabase(MountainReaderDbHelper.DATABASE_NAME);
+            dbHelper = new MountainReaderDbHelper(MainActivity.this);
+
             try
             {
                 JSONArray mountains = new JSONArray(o);
@@ -163,17 +171,21 @@ public class MainActivity extends AppCompatActivity {
                     String imageUrl = aux.getString("img");
                     String wikipediaUrl = aux.getString("url");
 
+
                     values.put(MountainReaderContract.MountainEntry.COLUMN_NAME_NAME, name);
                     values.put(MountainReaderContract.MountainEntry.COLUMN_NAME_LOCATION, location);
                     values.put(MountainReaderContract.MountainEntry.COLUMN_NAME_HEIGHT, height);
                     values.put(MountainReaderContract.MountainEntry.COLUMN_NAME_IMG_URL, imageUrl);
                     values.put(MountainReaderContract.MountainEntry.COLUMN_NAME_INFO_URL, wikipediaUrl);
 
-                    long newRowId = db.insert(MountainReaderContract.MountainEntry.TABLE_NAME, null, values);
+
+                    db.insert(MountainReaderContract.MountainEntry.TABLE_NAME, null, values);
                     Log.d("hiho", "Database inserted");
+
 
                     Mountain m = new Mountain(name, height, location, imageUrl, wikipediaUrl, id);
                     mountainList.add(m);
+
                 }
             }
             catch( JSONException e) {
